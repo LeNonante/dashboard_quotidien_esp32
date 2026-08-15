@@ -1,3 +1,4 @@
+// go run .
 package main
 
 import (
@@ -5,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,92 +20,52 @@ import (
 // À générer de manière aléatoire et à garder secrète.
 const secretKey = "VOTRE_CLE_SECRETE_TRES_LONGUE_ET_COMPLEXE"
 
-// Template HTML basique intégré directement dans le code.
-// Dans un vrai projet, tu peux utiliser "html/template" pour parser un fichier externe.
-const htmlTemplate = `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            width: 760px; /* Largeur de l'écran 7.5" moins le padding */
-            height: 440px; /* Hauteur de l'écran 7.5" moins le padding */
-            background-color: white;
-            color: black;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            border: 2px solid black;
-            box-sizing: border-box;
-        }
-        .header {
-            font-size: 32px;
-            font-weight: bold;
-            border-bottom: 4px solid black;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .content {
-            font-size: 24px;
-            flex-grow: 1;
-        }
-        .footer {
-            font-size: 16px;
-            text-align: right;
-            border-top: 2px solid black;
-            padding-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <span>Dashboard Personnel</span>
-        <span>{{ .Time }}</span>
-    </div>
-    <div class="content">
-        <h2>Statut de la VM de Production</h2>
-        <ul>
-            <li>CPU : 12%</li>
-            <li>RAM : 4.2 / 16 GB</li>
-            <li>Conteneurs Actifs : 8</li>
-        </ul>
-        <h2>Prochain événement</h2>
-        <p>Réunion de conception architecture de données - 14h00</p>
-    </div>
-    <div class="footer">
-        Généré le {{ .Date }}
-    </div>
-</body>
-</html>
-`
-
 // Structure pour injecter des variables dynamiques dans le HTML
-type TemplateData struct {
-	Time string
-	Date string
+type DashboardData struct {
+	JourSemaine string // Ex: "JEUDI"
+	JourMois    string // Ex: "15 AOÛT"
+	HeureMAJ    string
+	TempMatin   string
+	EtatMatin   string
+	TempAprem   string
+	EtatAprem   string
+	Evenements  []EventInfo // La liste qu'on a créée dans calendar.go
 }
 
 // 1. Serveur Interne (Localhost uniquement)
 func startInternalHTMLServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		t, err := template.New("dashboard").Parse(htmlTemplate)
-		if err != nil {
-			http.Error(w, "Erreur template", http.StatusInternalServerError)
-			return
+		tMatin, eMatin, tAprem, eAprem := getWeather()
+		agendaDuJour := getGoogleCalendarEvents()
+
+		// 1. Les dictionnaires de traduction en haut de ta fonction
+		joursFR := []string{"DIMANCHE", "LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI"}
+		moisFR := []string{"JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"}
+
+		// 2. Récupération de l'heure actuelle
+		now := time.Now()
+
+		// 3. Extraction et traduction
+		// now.Weekday() renvoie 0 pour Dimanche, 1 pour Lundi... parfait pour notre tableau !
+		jourSemaine := joursFR[now.Weekday()]
+
+		// now.Month() renvoie 1 pour Janvier, 2 pour Février. On fait -1 pour s'aligner avec le tableau (qui commence à 0)
+		jourMois := fmt.Sprintf("%d %s", now.Day(), moisFR[now.Month()-1])
+
+		data := DashboardData{
+			JourSemaine: jourSemaine,
+			JourMois:    jourMois,
+			HeureMAJ:    time.Now().Format("15:04"),
+			TempMatin:   tMatin,
+			EtatMatin:   eMatin,
+			TempAprem:   tAprem,
+			EtatAprem:   eAprem,
+			Evenements:  agendaDuJour,
 		}
 
-		data := TemplateData{
-			Time: time.Now().Format("15:04"),
-			Date: time.Now().Format("02/01/2006"),
-		}
+		t, _ := template.ParseFiles("template/index.html")
 
-		w.Header().Set("Content-Type", "text/html")
 		t.Execute(w, data)
 	})
 
@@ -203,6 +165,7 @@ func imageAPIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
 	// Lancement du serveur HTML interne dans une Goroutine
 	go startInternalHTMLServer()
 

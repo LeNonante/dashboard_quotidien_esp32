@@ -21,6 +21,62 @@ L'idée de base : **déporter toute la complexité sur le serveur**. L'ESP32 n'a
 
 Tout est dans le dossier `serveur_go`. C'est un exécutable autonome, ultra-léger.
 
+les differentes fonctions sont séparées dans les fichiers go.
+Pour google :
+Rends-toi sur la Google Cloud Console.
+
+    Crée un nouveau projet (ou sélectionne le projet existant dédié à ton dashboard).
+
+    Dans la barre de recherche en haut, ou via le menu de gauche, navigue vers API et services > Bibliothèque.
+
+    Cherche Google Calendar API et clique sur le bouton bleu Activer.
+
+Étape 2 : Création du Compte de Service
+
+    Dans le menu de gauche de la console Google Cloud, clique sur API et services > Identifiants.
+
+    En haut de l'écran, clique sur + CRÉER DES IDENTIFIANTS et sélectionne Compte de service.
+
+    Remplis le champ Nom du compte de service (ex: lecteur-agenda). Une adresse e-mail spécifique (se terminant par ...iam.gserviceaccount.com) se générera automatiquement juste en dessous.
+
+    Clique sur Créer et continuer, puis clique simplement sur OK tout en bas. (Il n'est pas nécessaire d'attribuer des rôles complexes pour ce cas d'usage).
+
+Étape 3 : Génération et sauvegarde de la clé secrète (JSON)
+
+    De retour sur la page Identifiants, fais défiler la page jusqu'à la section Comptes de service.
+
+    Clique sur l'adresse e-mail du compte que tu viens de créer.
+
+    Sur la nouvelle page, navigue vers l'onglet CLÉS (en haut).
+
+    Clique sur le bouton déroulant Ajouter une clé, puis choisis Créer une clé.
+
+    Laisse le format sur JSON et valide en cliquant sur Créer.
+
+    Le fichier se télécharge automatiquement sur ton ordinateur. Renomme-le immédiatement en credentials.json et place-le à la racine de ton projet de code.
+
+    Note de sécurité : Ce fichier est l'équivalent d'un mot de passe. Il ne doit jamais être partagé publiquement ou poussé sur un dépôt GitHub public.
+
+Etape 4 : Partage des agendas au compte de service
+
+Le compte de service est un robot virtuel. Par défaut, il n'a accès à aucun agenda privé. Il faut l'inviter manuellement sur chaque agenda souhaité.
+
+    Copie l'adresse e-mail complète de ton compte de service (lecteur-agenda@...iam.gserviceaccount.com).
+
+    Ouvre l'interface web classique de Google Agenda dans ton navigateur.
+
+    Dans la colonne de gauche, sous Mes agendas, survole le calendrier que tu souhaites lire et clique sur les trois petits points verticaux (⋮).
+
+    Sélectionne Paramètres et partage.
+
+    Fais défiler la page jusqu'à la section Partager avec des personnes ou des groupes spécifiques.
+
+    Clique sur le bouton Ajouter des personnes et des groupes.
+
+    Colle l'adresse e-mail du compte de service et attribue-lui au minimum l'autorisation Afficher les détails des événements.
+
+    Répète cette opération (étapes 3 à 7) pour chaque agenda supplémentaire que ton code devra interroger.
+
 ### Comment tester le design sur Windows
 Si je veux modifier la mise en page (ajouter le calendrier, les stats Strava/Altarun, etc.) sans avoir à flasher l'ESP32 à chaque fois :
 

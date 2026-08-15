@@ -3,57 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            width: 760px; /* Largeur de l'écran 7.5" moins le padding */
-            height: 440px; /* Hauteur de l'écran 7.5" moins le padding */
+        /* Réinitialisation et fond gris pour bien voir les limites de l'écran 800x480 sur un PC */
+        body { margin: 0; background-color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        /* Conteneur principal E-Ink */
+        .eink-display {
+            width: 800px;
+            height: 480px;
             background-color: white;
             color: black;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             display: flex;
+            box-sizing: border-box;
+            border: 4px solid black;
+            overflow: hidden;
+        }
+
+        /* --- COLONNE GAUCHE (Data Froide) --- */
+        .sidebar {
+            width: 260px;
+            border-right: 6px solid black;
+            padding: 25px;
+            display: flex;
             flex-direction: column;
-            border: 2px solid black;
             box-sizing: border-box;
         }
-        .header {
-            font-size: 32px;
-            font-weight: bold;
-            border-bottom: 4px solid black;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+        
+        .date-block { margin-bottom: 10px; }
+        .day { font-size: 34px; font-weight: 900; text-transform: uppercase; line-height: 1; letter-spacing: -1px; }
+        .month { font-size: 26px; font-weight: bold; margin-top: 5px; }
+        .date-maj-label { font-size: 10px; color: #333; margin-bottom: 2px; }
+
+        .divider { height: 6px; background: white; width: 100%; }
+        .section-title { font-size: 16px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 2px; }
+        
+        .weather-row { display: flex; align-items: center; margin-bottom: 20px; }
+        .icon { width: 48px; height: 48px; margin-right: 15px; }
+        .data-label { font-size: 16px; color: #333; margin-bottom: 2px; }
+        .data-value { font-size: 26px; font-weight: bold; }
+
+        .temp-block { display: flex; align-items: center; margin-top: 10px; }
+        .temp-value { font-size: 46px; font-weight: 900; letter-spacing: -2px; }
+        .temp-unit { font-size: 22px; font-weight: bold; margin-left: 5px; margin-top: -15px; }
+
+        /* --- COLONNE DROITE (Planning) --- */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
         }
-        .content {
-            font-size: 24px;
-            flex-grow: 1;
-        }
-        .footer {
-            font-size: 16px;
-            text-align: right;
-            border-top: 2px solid black;
-            padding-top: 10px;
-        }
+
+        .agenda-title { font-size: 32px; font-weight: 900; text-transform: uppercase; border-bottom: 6px solid black; padding-bottom: 15px; margin-top: 0; margin-bottom: 30px; }
+
+        .event { display: flex; margin-bottom: 25px; }
+        .event-time { font-size: 24px; font-weight: bold; width: 110px; flex-shrink: 0; padding-top: 2px; }
+        
+        /* Ligne verticale pour relier les événements */
+        .event-details { border-left: 6px solid black; padding-left: 20px; padding-bottom: 10px; }
+        
+        .event-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; line-height: 1.1; }
+        .event-desc { font-size: 20px; font-style: italic; font-weight: 500; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <span>Dashboard Personnel</span>
-        <span>{{ .Time }}</span>
+
+    <div class="eink-display">
+        <!-- Colonne Gauche -->
+        <div class="sidebar">
+            <div class="date-block">
+                <div class="day">{{.JourSemaine}}</div>
+                <div class="month">{{.JourMois}}</div>
+                <div class="date-maj-label">Dernière MAJ : {{.HeureMAJ}}</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">MÉTÉO</div>
+            
+            <!-- Matin  -->
+            <div class="weather-row">
+                <!-- Début des conditions Go pour l'icône de le matin -->
+                {{ if eq .EtatMatin "Soleil" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                
+                {{ else if eq .EtatMatin "Éclaircies" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-sun-icon lucide-cloud-sun"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></svg>
+                
+                {{ else if eq .EtatMatin "Nuageux" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-icon lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                
+                {{ else if eq .EtatMatin "Brouillard" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-waves-horizontal-icon lucide-waves-horizontal"><path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></svg>
+                
+                {{ else if eq .EtatMatin "Bruine" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-sun-rain-icon lucide-cloud-sun-rain"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M3 20a5 5 0 1 1 8.9-4H13a3 3 0 0 1 2 5.24"/><path d="M11 20v2"/><path d="M7 19v2"/></svg>
+                
+                {{ else if or (eq .EtatMatin "Pluie") (eq .EtatMatin "Averses") }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-rain-wind-icon lucide-cloud-rain-wind"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m9.2 22 3-7"/><path d="m9 13-3 7"/><path d="m17 13-3 7"/></svg>
+                
+                {{ else if eq .EtatMatin "Neige" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0  24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-snowflake-icon lucide-snowflake"><path d="m10 20-1.25-2.5L6 18"/><path d="M10 4 8.75 6.5 6 6"/><path d="m14 20 1.25-2.5L18 18"/><path d="m14 4 1.25 2.5L18 6"/><path d="m17 21-3-6h-4"/><path d="m17 3-3 6 1.5 3"/><path d="M2 12h6.5L10 9"/><path d="m20 10-1.5 2 1.5 2"/><path d="M22 12h-6.5L14 15"/><path d="m4 10 1.5 2L4 14"/><path d="m7 21 3-6-1.5-3"/><path d="m7 3 3 6h4"/></svg>
+                
+                {{ else if eq .EtatMatin "Orage" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-lightning-icon lucide-cloud-lightning"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12-3 5h4l-3 5"/></svg>
+                
+                {{ else }}
+                    <!-- Fallback au cas où l'état est "Inconnu" (On met un nuage par défaut) -->
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-icon lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                {{ end }}
+                
+                <div>
+                    <div class="data-label">Matin (10h)</div>
+                    <div class="data-value">{{.TempMatin}}</div>
+                    <div class="data-label">{{.EtatMatin}}</div>
+                </div>
+            </div>
+            
+            <!-- Après-midi -->
+            <div class="weather-row">
+                <!-- Début des conditions Go pour l'icône de l'après-midi -->
+                {{ if eq .EtatAprem "Soleil" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun-icon lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                
+                {{ else if eq .EtatAprem "Éclaircies" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-sun-icon lucide-cloud-sun"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></svg>
+                
+                {{ else if eq .EtatAprem "Nuageux" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-icon lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                
+                {{ else if eq .EtatAprem "Brouillard" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-waves-horizontal-icon lucide-waves-horizontal"><path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></svg>
+                
+                {{ else if eq .EtatAprem "Bruine" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-sun-rain-icon lucide-cloud-sun-rain"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M3 20a5 5 0 1 1 8.9-4H13a3 3 0 0 1 2 5.24"/><path d="M11 20v2"/><path d="M7 19v2"/></svg>
+                
+                {{ else if or (eq .EtatAprem "Pluie") (eq .EtatAprem "Averses") }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-rain-wind-icon lucide-cloud-rain-wind"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m9.2 22 3-7"/><path d="m9 13-3 7"/><path d="m17 13-3 7"/></svg>
+                
+                {{ else if eq .EtatAprem "Neige" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0  24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-snowflake-icon lucide-snowflake"><path d="m10 20-1.25-2.5L6 18"/><path d="M10 4 8.75 6.5 6 6"/><path d="m14 20 1.25-2.5L18 18"/><path d="m14 4 1.25 2.5L18 6"/><path d="m17 21-3-6h-4"/><path d="m17 3-3 6 1.5 3"/><path d="M2 12h6.5L10 9"/><path d="m20 10-1.5 2 1.5 2"/><path d="M22 12h-6.5L14 15"/><path d="m4 10 1.5 2L4 14"/><path d="m7 21 3-6-1.5-3"/><path d="m7 3 3 6h4"/></svg>
+                
+                {{ else if eq .EtatAprem "Orage" }}
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-lightning-icon lucide-cloud-lightning"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12-3 5h4l-3 5"/></svg>
+                
+                {{ else }}
+                    <!-- Fallback au cas où l'état est "Inconnu" (On met un nuage par défaut) -->
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-icon lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                {{ end }}
+
+                <div>
+                    <div class="data-label">Après-midi (16h)</div>
+                    <div class="data-value">{{.TempAprem}}</div>
+                    <div class="data-label">{{.EtatAprem}}</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">APPARTEMENT</div>
+            
+            <div class="temp-block">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thermometer-icon lucide-thermometer"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                <div style="margin-left: 10px;">
+                    <span class="temp-value">22.5</span><span class="temp-unit">°C</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne Droite -->
+        <div class="main-content">
+            <h1 class="agenda-title">Agenda du jour</h1>
+
+            <!-- Début de la boucle : pour chaque événement dans .Evenements -->
+            {{ range .Evenements }}
+            <div class="event">
+                <!-- À l'intérieur du range, le point (.) représente l'événement en cours -->
+                <div class="event-time">{{ .TimeStr }}</div>
+                
+                <div class="event-details">
+                    <div class="event-title">{{ .Summary }}</div>
+                    <div class="event-desc">{{ .Agenda }}</div>
+                </div>
+            </div>
+            {{ else }}
+            <!-- Optionnel : Ce qui s'affiche si la liste est vide -->
+            <div class="event">
+                <div class="event-details">
+                    <div class="event-title">Rien de prévu aujourd'hui !</div>
+                </div>
+            </div>
+            {{ end }}
+            <!-- Fin de la boucle -->
+
+        </div>
     </div>
-    <div class="content">
-        <h2>Statut de la VM de Production</h2>
-        <ul>
-            <li>CPU : 12%</li>
-            <li>RAM : 4.2 / 16 GB</li>
-            <li>Conteneurs Actifs : 8</li>
-        </ul>
-        <h2>Prochain événement</h2>
-        <p>Réunion de conception architecture de données - 14h00</p>
-    </div>
-    <div class="footer">
-        Généré le {{ .Date }}
-    </div>
+
 </body>
 </html>
