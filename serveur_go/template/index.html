@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            width: 760px; /* Largeur de l'écran 7.5" moins le padding */
+            height: 440px; /* Hauteur de l'écran 7.5" moins le padding */
+            background-color: white;
+            color: black;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid black;
+            box-sizing: border-box;
+        }
+        .header {
+            font-size: 32px;
+            font-weight: bold;
+            border-bottom: 4px solid black;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .content {
+            font-size: 24px;
+            flex-grow: 1;
+        }
+        .footer {
+            font-size: 16px;
+            text-align: right;
+            border-top: 2px solid black;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span>Dashboard Personnel</span>
+        <span>{{ .Time }}</span>
+    </div>
+    <div class="content">
+        <h2>Statut de la VM de Production</h2>
+        <ul>
+            <li>CPU : 12%</li>
+            <li>RAM : 4.2 / 16 GB</li>
+            <li>Conteneurs Actifs : 8</li>
+        </ul>
+        <h2>Prochain événement</h2>
+        <p>Réunion de conception architecture de données - 14h00</p>
+    </div>
+    <div class="footer">
+        Généré le {{ .Date }}
+    </div>
+</body>
+</html>
