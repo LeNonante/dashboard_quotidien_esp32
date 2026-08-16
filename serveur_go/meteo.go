@@ -43,7 +43,7 @@ func traduireMeteo(code int) string {
 
 func getWeather() (string, string, string, string) {
 	// API appelée avec temperature_2m ET weathercode
-	url := "https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&hourly=temperature_2m,weathercode&timezone=Europe%2FParis&forecast_days=1"
+	url := "https://api.open-meteo.com/v1/forecast?latitude=48.299999&longitude=4.083330&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=1"
 
 	resp, err := http.Get(url)
 	if err != nil {
