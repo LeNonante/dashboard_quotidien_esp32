@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/chromedp/chromedp"
 )
 
@@ -29,6 +31,7 @@ type DashboardData struct {
 	EtatMatin   string
 	TempAprem   string
 	EtatAprem   string
+	Mails       MailCounts
 	Evenements  []EventInfo // La liste qu'on a créée dans calendar.go
 }
 
@@ -62,6 +65,7 @@ func startInternalHTMLServer() {
 			TempAprem:   tAprem,
 			EtatAprem:   eAprem,
 			Evenements:  agendaDuJour,
+			Mails:       getUnreadEmails(),
 		}
 
 		t, _ := template.ParseFiles("template/index.html")
@@ -165,6 +169,13 @@ func imageAPIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Attention: Aucun fichier .env trouvé, ou erreur de lecture.")
+	}
+
+	log.Println(getUnreadEmails())
 
 	// Lancement du serveur HTML interne dans une Goroutine
 	go startInternalHTMLServer()

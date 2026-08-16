@@ -1,1 +1,3 @@
 - recup Lieux et  description events google
+- retirer Evenement google passés
+- Thermomètre appart ?
