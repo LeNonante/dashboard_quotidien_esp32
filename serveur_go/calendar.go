@@ -77,6 +77,14 @@ func getGoogleCalendarEvents() []EventInfo {
 				endTimeStr = endTime.Format("15:04")
 			}
 
+			// On calcule l'heure limite (il y a 30 minutes)
+			limitTime := time.Now().Add(-30 * time.Minute)
+
+			// Si l'heure de fin de l'événement est avant cette limite, on l'ignore (continue)
+			if endTime.Before(limitTime) {
+				continue
+			}
+
 			// On ajoute l'événement à notre liste globale
 			allEvents = append(allEvents, EventInfo{
 				StartTime:  startTime,

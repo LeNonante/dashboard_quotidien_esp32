@@ -81,8 +81,8 @@ func startInternalHTMLServer() {
 
 // 2. Fonction pour capturer la page HTML avec Chromium headless
 func captureDashboard() ([]byte, error) {
-	// Création d'un contexte avec un timeout strict de 15 secondes
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	// Création d'un contexte avec un timeout strict de 45 secondes
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 
 	// Initialisation de l'instance Chrome headless
