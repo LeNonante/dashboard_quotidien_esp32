@@ -97,16 +97,18 @@ Si je veux modifier la mise en page (ajouter le calendrier, les stats Strava/Alt
 
 /!\ ne pas oublier d'ajouter credentials et .env
 
+Copier tout sur le serv
+dans le dossier serveur_go
+`sudo docker compose up -d --build`
 
+Dans NGINX Proxy Manager
+Route vers `esp32-dashboard` `8081`.
+Dans l'onglet custom locations :
+- ajouter avec comme location `/`
+- dans les forward ip et port : `esp32-dashboard` `8081`
+- puis dans la roue crantée des paramètres de la custom location : `rewrite ^/$ /api/v1/dashboard.png break;`
+Comme ca, l'url xxx.domaine.fr envoie direct sur l'image
 
-
-Comme l'objectif est d'avoir tous les services de prod centralisés sur une seule VM :
-
-1. Compiler le code pour Linux.
-
-2. S'assurer que le paquet chromium (ou chromium-browser) est installé sur la VM pour que chromedp puisse faire les captures.
-
-3. Faire tourner le binaire en tâche de fond. Le serveur n'expose le HTML qu'en boucle locale (127.0.0.1), donc aucun risque que quelqu'un lise les données sur le réseau.
 
 ### Partie 2 : Le Client (ESP32 + Waveshare 7.5")
 ## Câblage SPI Standard
