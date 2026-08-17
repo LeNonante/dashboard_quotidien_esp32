@@ -14,7 +14,8 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont && \
+    ttf-freefont \
+    tzdata && \
     ln -s /usr/bin/chromium-browser /usr/bin/google-chrome
 
 COPY --from=builder /app/dashboard-server .
