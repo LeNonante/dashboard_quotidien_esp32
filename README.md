@@ -95,6 +95,11 @@ Si je veux modifier la mise en page (ajouter le calendrier, les stats Strava/Alt
 
 ### Déploiement en Production
 
+/!\ ne pas oublier d'ajouter credentials et .env
+
+
+
+
 Comme l'objectif est d'avoir tous les services de prod centralisés sur une seule VM :
 
 1. Compiler le code pour Linux.
