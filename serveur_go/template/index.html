@@ -59,7 +59,11 @@
         .agenda-title { font-size: 32px; font-weight: 900; text-transform: uppercase; border-bottom: 6px solid black; padding-bottom: 15px; margin-top: 0; }
 
         .event { display: flex; margin-bottom: 25px; }
-        .event-time { font-size: 24px; font-weight: bold; width: 110px; flex-shrink: 0; padding-top: 2px; }
+        
+        /* NOUVEAU CSS POUR LES HEURES */
+        .event-time-col { width: 110px; flex-shrink: 0; padding-top: 2px; display: flex; flex-direction: column; }
+        .event-start { font-size: 24px; font-weight: bold; }
+        .event-end { font-size: 16px; font-weight: normal; color: #555; margin-top: 2px; }
         
         /* Ligne verticale pour relier les événements */
         .event-details { border-left: 6px solid black; padding-left: 20px; padding-bottom: 10px; }
@@ -116,7 +120,6 @@
                 {{ end }}
                 
                 <div>
-                    <!-- <div class="data-label">Matin (10h)</div> -->
                      <div class="data-label">{{.EtatMatin}}</div>
                     <div class="data-value">{{.TempMatin}}</div>
                 </div>
@@ -155,7 +158,6 @@
                 {{ end }}
 
                 <div>
-                    <!-- <div class="data-label">Après-midi (16h)</div> -->
                     <div class="data-label">{{.EtatAprem}}</div>
                     <div class="data-value">{{.TempAprem}}</div>
                 </div>
@@ -196,8 +198,15 @@
             <!-- Début de la boucle : pour chaque événement dans .Evenements -->
             {{ range .Evenements }}
             <div class="event">
-                <!-- À l'intérieur du range, le point (.) représente l'événement en cours -->
-                <div class="event-time">{{ .TimeStr }}</div>
+                
+                <!-- NOUVELLE STRUCTURE POUR L'HEURE -->
+                <div class="event-time-col">
+                    <div class="event-start">{{ .TimeStr }}</div>
+                    <!-- On n'affiche l'heure de fin que si elle existe (exclut les "Journée") -->
+                    {{ if .EndTimeStr }}
+                        <div class="event-end">{{ .EndTimeStr }}</div>
+                    {{ end }}
+                </div>
                 
                 <div class="event-details">
                     <div class="event-title">{{ .Summary }}</div>

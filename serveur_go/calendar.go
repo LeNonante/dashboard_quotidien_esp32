@@ -13,10 +13,12 @@ import (
 // EventInfo est une structure sur-mesure pour stocker les infos essentielles
 // de n'importe quel agenda avant de les trier.
 type EventInfo struct {
-	StartTime time.Time
-	TimeStr   string
-	Summary   string
-	Agenda    string // Pratique pour afficher un petit tag "Pro" ou "Perso"
+	StartTime  time.Time
+	EndTime    time.Time
+	TimeStr    string
+	EndTimeStr string
+	Summary    string
+	Agenda     string // Pratique pour afficher un petit tag "Pro" ou "Perso"
 }
 
 func getGoogleCalendarEvents() []EventInfo {
@@ -34,7 +36,6 @@ func getGoogleCalendarEvents() []EventInfo {
 	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location()).Format(time.RFC3339)
 
 	// 3. Déclaration de tes 3 agendas
-	// On utilise une map : la clé est l'ID, la valeur est le nom que tu veux lui donner
 	agendas := map[string]string{
 		"b85ef55c7d755fa46720fe09471c4b0e0d836e647666317379e6185b42eedfbf@group.calendar.google.com": "Perso",
 		"658253c94af54f208b10aca612100ff3d8d549ee573a30b893870c29777cca6c@group.calendar.google.com": "Emploie du temps UTT",
@@ -59,25 +60,31 @@ func getGoogleCalendarEvents() []EventInfo {
 		}
 
 		for _, item := range events.Items {
-			var startTime time.Time
-			var timeStr string
+			var startTime, endTime time.Time
+			var timeStr, endTimeStr string
 
 			if item.Start.DateTime == "" {
 				// C'est un événement sur la journée entière (pas d'heure précise)
 				startTime, _ = time.Parse("2006-01-02", item.Start.Date)
+				endTime, _ = time.Parse("2006-01-02", item.End.Date) // Récupération de la fin de journée
 				timeStr = "Journée"
+				endTimeStr = "" //pas important
 			} else {
 				// C'est un événement classique avec une heure
 				startTime, _ = time.Parse(time.RFC3339, item.Start.DateTime)
+				endTime, _ = time.Parse(time.RFC3339, item.End.DateTime)
 				timeStr = startTime.Format("15:04")
+				endTimeStr = endTime.Format("15:04")
 			}
 
 			// On ajoute l'événement à notre liste globale
 			allEvents = append(allEvents, EventInfo{
-				StartTime: startTime,
-				TimeStr:   timeStr,
-				Summary:   item.Summary,
-				Agenda:    agendaName,
+				StartTime:  startTime,
+				EndTime:    endTime,
+				EndTimeStr: endTimeStr,
+				TimeStr:    timeStr,
+				Summary:    item.Summary,
+				Agenda:     agendaName,
 			})
 		}
 	}
