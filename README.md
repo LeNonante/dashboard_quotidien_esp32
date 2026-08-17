@@ -22,6 +22,7 @@ L'idée de base : **déporter toute la complexité sur le serveur**. L'ESP32 n'a
 Tout est dans le dossier `serveur_go`. C'est un exécutable autonome, ultra-léger.
 
 les differentes fonctions sont séparées dans les fichiers go.
+
 Pour google :
 Rends-toi sur la Google Cloud Console.
 
