@@ -2,12 +2,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"html/template"
+	"image/png"
 	"log"
 	"net/http"
 	"strconv"
@@ -110,6 +112,33 @@ func captureDashboard() ([]byte, error) {
 	return imageBuf, err
 }
 
+// Convertir l'image en tableau de bytes monochrome 1bpp (1 bit par pixel)
+func toMonochrome1bpp(pngBytes []byte, width, height int) ([]byte, error) {
+	img, err := png.Decode(bytes.NewReader(pngBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != width || bounds.Dy() != height {
+		return nil, fmt.Errorf("dimensions inattendues: %dx%d (attendu %dx%d)", bounds.Dx(), bounds.Dy(), width, height)
+	}
+
+	rowBytes := width / 8
+	buf := make([]byte, rowBytes*height)
+
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			r, g, b, _ := img.At(bounds.Min.X+x, bounds.Min.Y+y).RGBA()
+			lum := (299*(r>>8) + 587*(g>>8) + 114*(b>>8)) / 1000
+			if lum < 128 { // pixel sombre -> bit à 1 (noir)
+				buf[y*rowBytes+x/8] |= 0x80 >> uint(x%8)
+			}
+		}
+	}
+	return buf, nil
+}
+
 // 3. Middleware de sécurité HMAC-SHA256
 func authenticateRequest(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +197,26 @@ func imageAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(imgBytes)
 }
 
+func imageRawAPIHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Requête image brute depuis %s", r.RemoteAddr)
+
+	pngBytes, err := captureDashboard()
+	if err != nil {
+		http.Error(w, "Erreur de capture", http.StatusInternalServerError)
+		return
+	}
+
+	raw, err := toMonochrome1bpp(pngBytes, 800, 480)
+	if err != nil {
+		http.Error(w, "Erreur de conversion", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.Itoa(len(raw)))
+	w.Write(raw)
+}
+
 func main() {
 
 	err := godotenv.Load()
@@ -186,6 +235,7 @@ func main() {
 	// On wrap le handler avec le middleware de sécurité HMAC
 	//mux.HandleFunc("/api/v1/dashboard.png", authenticateRequest(imageAPIHandler))
 	mux.HandleFunc("/api/v1/dashboard.png", imageAPIHandler)
+	mux.HandleFunc("/api/v1/dashboard.raw", imageRawAPIHandler)
 
 	log.Println("Serveur API public démarré sur 0.0.0.0:8081")
 	log.Println("En attente de requêtes cryptées de l'ESP32...")

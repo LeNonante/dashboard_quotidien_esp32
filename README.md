@@ -9,7 +9,7 @@ L'idée de base : **déporter toute la complexité sur le serveur**. L'ESP32 n'a
 1. **Le Serveur (Go)** : 
    - Crée une page HTML interne invisible sur le réseau.
    - Utilise `chromedp` pour simuler un navigateur, ouvrir la page HTML et prendre un screenshot à la résolution exacte de l'écran Waveshare (800x480).
-   - Expose une route API protégée pour distribuer cette image.
+   - Expose une route API protégée pour distribuer cette image (distribuée en png et raw car esp a besoin deraw pour pas décoder le png)
 2. **Le Client (ESP32)** :
    - Se réveille du Deep Sleep.
    - Calcule un jeton de sécurité avec l'heure exacte (HMAC).
