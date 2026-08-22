@@ -112,15 +112,14 @@ Comme ca, l'url xxx.domaine.fr envoie direct sur l'image
 
 ### Partie 2 : Le Client (ESP32 + Waveshare 7.5")
 ## Câblage SPI Standard
-- VCC -> 3.3V (Surtout pas 5V !)
-- GND -> GND
-- DIN -> GPIO 23
-- CLK -> GPIO 18
-- CS -> GPIO 5
-- DC -> GPIO 17
-- RST -> GPIO 16
-- BUSY -> GPIO 4
-
+VCC	->  3V3	            Alim logique
+GND	->  GND	            Masse
+DIN	->  IO23 (MOSI)	    Données SPI
+CLK	->  IO18 (SCK)	    Horloge SPI
+CS	->  IO14 ->  D6	    Sélection SPI
+DC	->  IO17 ->  D10	Data/Command
+RST	->  IO16 ->  D11	Reset
+BUSY -> IO4	->   D12	Occupé
 ## La logique du code C++
 
 Le code dans la fonction loop() est vide. Tout se passe dans le setup() en mode One-Shot :

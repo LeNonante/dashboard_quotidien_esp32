@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <GxEPD2_BW.h>
+#include <esp_sleep.h>
 
 #define EPD_CS   14
 #define EPD_DC   17
@@ -9,11 +10,15 @@
 
 const char* ssid     = "Airbox_BE0A";
 const char* password = "T9FBbegA8gdN";
-const char* imageURL = "http://dashboard-esp32-info.mussetau.fr/api/v1/dashboard.raw"; // URL de l'image à récupérer
+const char* imageURL = "http://dashboard-esp32-info.mussetau.fr/api/v1/dashboard.raw";
 
 #define IMG_WIDTH  800
 #define IMG_HEIGHT 480
 #define IMG_SIZE   (IMG_WIDTH / 8 * IMG_HEIGHT) // 48000 octets
+
+#define SLEEP_MINUTES    15
+#define uS_TO_S_FACTOR   1000000ULL
+#define WIFI_TIMEOUT_MS  20000 // 20s max pour se connecter, sinon on repart en veille
 
 GxEPD2_BW<GxEPD2_750_T7, GxEPD2_750_T7::HEIGHT> display(
     GxEPD2_750_T7(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
@@ -39,23 +44,38 @@ bool fetchImage() {
   return received == IMG_SIZE;
 }
 
+void goToSleep() {
+  Serial.println("Mise en veille pour 15 minutes...");
+  Serial.flush();
+  esp_sleep_enable_timer_wakeup(SLEEP_MINUTES * 60ULL * uS_TO_S_FACTOR);
+  esp_deep_sleep_start();
+  // rien après cette ligne : l'ESP32 redémarre entièrement au réveil
+}
+
 void setup() {
   Serial.begin(115200);
 
   imageBuffer = (uint8_t*) malloc(IMG_SIZE);
   if (!imageBuffer) {
     Serial.println("Échec allocation mémoire");
-    return;
+    goToSleep();
   }
 
   display.init(115200, true, 2, false);
-  display.setRotation(0); // important, voir remarque plus bas
+  display.setRotation(0);
 
   WiFi.begin(ssid, password);
   Serial.print("Connexion WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_TIMEOUT_MS) {
     delay(500);
     Serial.print(".");
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println(" échec de connexion WiFi.");
+    free(imageBuffer);
+    goToSleep();
   }
   Serial.println(" connecté !");
 
@@ -73,6 +93,9 @@ void setup() {
   }
 
   free(imageBuffer);
+  goToSleep();
 }
 
-void loop() {}
+void loop() {
+  // jamais atteint : goToSleep() ne rend jamais la main
+}
