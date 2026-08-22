@@ -14,16 +14,43 @@ const char* imageURL = "http://dashboard-esp32-info.mussetau.fr/api/v1/dashboard
 
 #define IMG_WIDTH  800
 #define IMG_HEIGHT 480
-#define IMG_SIZE   (IMG_WIDTH / 8 * IMG_HEIGHT) // 48000 octets
+#define IMG_SIZE   (IMG_WIDTH / 8 * IMG_HEIGHT)
 
 #define SLEEP_MINUTES    15
 #define uS_TO_S_FACTOR   1000000ULL
-#define WIFI_TIMEOUT_MS  20000 // 20s max pour se connecter, sinon on repart en veille
+#define WIFI_TIMEOUT_MS  15000
+#define WIFI_MAX_RETRIES 4
 
 GxEPD2_BW<GxEPD2_750_T7, GxEPD2_750_T7::HEIGHT> display(
     GxEPD2_750_T7(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 uint8_t* imageBuffer = nullptr;
+
+bool connectWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false); // meilleure fiabilité de connexion
+
+  for (int attempt = 1; attempt <= WIFI_MAX_RETRIES; attempt++) {
+    Serial.printf("Connexion WiFi (tentative %d/%d)", attempt, WIFI_MAX_RETRIES);
+    WiFi.begin(ssid, password);
+
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_TIMEOUT_MS) {
+      delay(500);
+      Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println(" connecté !");
+      return true;
+    }
+
+    Serial.println(" échec.");
+    WiFi.disconnect(true); // repart de zéro avant de retenter
+    delay(2000);           // laisse la box "digérer" le refus
+  }
+  return false;
+}
 
 bool fetchImage() {
   HTTPClient http;
@@ -46,10 +73,10 @@ bool fetchImage() {
 
 void goToSleep() {
   Serial.println("Mise en veille pour 15 minutes...");
+  WiFi.disconnect(true); // déconnexion propre : évite le refus au prochain réveil
   Serial.flush();
   esp_sleep_enable_timer_wakeup(SLEEP_MINUTES * 60ULL * uS_TO_S_FACTOR);
   esp_deep_sleep_start();
-  // rien après cette ligne : l'ESP32 redémarre entièrement au réveil
 }
 
 void setup() {
@@ -64,20 +91,11 @@ void setup() {
   display.init(115200, true, 2, false);
   display.setRotation(0);
 
-  WiFi.begin(ssid, password);
-  Serial.print("Connexion WiFi");
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_TIMEOUT_MS) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println(" échec de connexion WiFi.");
+  if (!connectWiFi()) {
+    Serial.println("Échec de connexion WiFi après plusieurs tentatives.");
     free(imageBuffer);
     goToSleep();
   }
-  Serial.println(" connecté !");
 
   if (fetchImage()) {
     display.setFullWindow();
@@ -96,6 +114,4 @@ void setup() {
   goToSleep();
 }
 
-void loop() {
-  // jamais atteint : goToSleep() ne rend jamais la main
-}
+void loop() {}
