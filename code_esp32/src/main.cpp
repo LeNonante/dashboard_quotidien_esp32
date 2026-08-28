@@ -8,8 +8,8 @@
 #define EPD_RST  16
 #define EPD_BUSY 4
 
-const char* ssid     = "Airbox_BE0A";
-const char* password = "T9FBbegA8gdN";
+const char* ssid     = "Freebox-083257";
+const char* password = "9h77rqhr6xqcr2v9q6924s";
 const char* imageURL = "http://dashboard-esp32-info.mussetau.fr/api/v1/dashboard.raw";
 
 #define IMG_WIDTH  800
