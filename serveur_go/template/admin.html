@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111318">
+<title>Écran ESP32</title>
+<style>
+  :root {
+    --bg: #111318; --card: #1b1f27; --line: #2c323d;
+    --fg: #e8eaf0; --muted: #9aa3b2; --accent: #4c8dff; --ok: #35c07a; --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 4px 0 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+
+  .flash { border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; font-size: 14px; }
+  .flash.ok { background: rgba(53,192,122,.14); color: var(--ok); border: 1px solid rgba(53,192,122,.35); }
+  .flash.err { background: rgba(255,107,107,.12); color: var(--err); border: 1px solid rgba(255,107,107,.35); }
+
+  .modes { display: flex; gap: 10px; }
+  .modes form { flex: 1; }
+  button {
+    width: 100%; padding: 13px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: #232935; color: var(--fg); font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; margin-top: 4px; }
+  .state { font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input[type=file], select {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--line);
+    background: #232935; color: var(--fg); font-size: 15px;
+  }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .check { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; font-size: 14px; color: var(--fg); }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  .preview { width: 100%; height: auto; aspect-ratio: 800 / 480; object-fit: contain; border-radius: 10px; border: 1px solid var(--line); background: #fff; display: block; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Écran e-paper — pilotage</h1>
+
+  {{if .Message}}<div class="flash {{.MessageKind}}">{{.Message}}</div>{{end}}
+
+  <section>
+    <h2>Mode d'affichage</h2>
+    <div class="modes">
+      <form method="post" action="/admin/mode">
+        <input type="hidden" name="mode" value="dashboard">
+        <button type="submit" class="{{if not .IsPhoto}}active{{end}}">Dashboard</button>
+      </form>
+      <form method="post" action="/admin/mode">
+        <input type="hidden" name="mode" value="photo">
+        <button type="submit" class="{{if .IsPhoto}}active{{end}}">Photo</button>
+      </form>
+    </div>
+    <p class="state">
+      Mode actuel : <strong>{{.Mode}}</strong>.
+      {{if .HasPhoto}}Photo en mémoire : {{if .PhotoName}}{{.PhotoName}}{{else}}(sans nom){{end}}{{if .PhotoDate}} — envoyée le {{.PhotoDate}}{{end}}.{{else}}Aucune photo enregistrée.{{end}}
+      <br>{{.SleepInfo}}
+    </p>
+  </section>
+
+  <section>
+    <h2>Envoyer une photo</h2>
+    <form method="post" action="/admin/upload" enctype="multipart/form-data">
+      <label for="photo">Fichier (JPEG, PNG ou GIF — 30 Mo max)</label>
+      <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif" required>
+
+      <div class="row">
+        <div>
+          <label for="fit">Cadrage</label>
+          <select id="fit" name="fit">
+            <option value="cover">Remplir l'écran (rogne)</option>
+            <option value="contain">Image entière (marges blanches)</option>
+          </select>
+        </div>
+        <div>
+          <label for="rotate">Rotation</label>
+          <select id="rotate" name="rotate">
+            <option value="0">Aucune</option>
+            <option value="90">90°</option>
+            <option value="180">180°</option>
+            <option value="270">270°</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="dither">Rendu</label>
+      <select id="dither" name="dither">
+        <option value="floyd">Tramage (photos)</option>
+        <option value="seuil">Noir et blanc net (texte, dessins)</option>
+      </select>
+
+      <label for="brightness">Luminosité <span id="bval">0</span></label>
+      <input type="range" id="brightness" name="brightness" min="-100" max="100" value="0"
+             oninput="document.getElementById('bval').textContent=this.value">
+
+      <label for="contrast">Contraste <span id="cval">0</span></label>
+      <input type="range" id="contrast" name="contrast" min="-100" max="100" value="0"
+             oninput="document.getElementById('cval').textContent=this.value">
+
+      <div class="check">
+        <input type="checkbox" id="activate" name="activate" value="1" checked>
+        <label for="activate" style="margin:0;color:var(--fg)">Passer en mode photo tout de suite</label>
+      </div>
+
+      <button type="submit" class="primary">Envoyer</button>
+      <p class="hint">L'écran fait 800 × 480 en noir et blanc pur : les photos très sombres ou peu contrastées rendent mal. Ajustez luminosité et contraste puis regardez l'aperçu.</p>
+    </form>
+  </section>
+
+  <section>
+    <h2>Aperçu réel</h2>
+    <img class="preview" src="/admin/preview.png" alt="Aperçu de l'écran" width="800" height="480">
+    <p class="hint">Rendu exact du buffer envoyé à l'ESP32.</p>
+  </section>
+</main>
+</body>
+</html>

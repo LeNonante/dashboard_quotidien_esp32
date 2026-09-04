@@ -12,6 +12,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -183,6 +184,23 @@ func authenticateRequest(next http.HandlerFunc) http.HandlerFunc {
 func imageAPIHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Requête authentifiée acceptée depuis %s", r.RemoteAddr)
 
+	// Même bascule que dashboard.raw, mais reconvertie en PNG pour la visualisation navigateur.
+	if currentState().Mode == ModePhoto {
+		if raw, err := readPhoto(); err == nil {
+			if png, err := rawToPNG(raw); err == nil {
+				log.Println("Mode photo : envoi de l'image téléversée (PNG)")
+				w.Header().Set("Content-Type", "image/png")
+				w.Header().Set("Content-Length", strconv.Itoa(len(png)))
+				w.Write(png)
+				return
+			} else {
+				log.Printf("Mode photo actif mais conversion PNG impossible (%v) : repli sur le dashboard", err)
+			}
+		} else {
+			log.Printf("Mode photo actif mais photo indisponible (%v) : repli sur le dashboard", err)
+		}
+	}
+
 	imgBytes, err := captureDashboard()
 	if err != nil {
 		log.Printf("Erreur de capture : %v", err)
@@ -200,18 +218,33 @@ func imageAPIHandler(w http.ResponseWriter, r *http.Request) {
 func imageRawAPIHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Requête image brute depuis %s", r.RemoteAddr)
 
+	// En mode photo, on sert le buffer déjà converti au lieu de screenshoter le dashboard.
+	if currentState().Mode == ModePhoto {
+		if raw, err := readPhoto(); err == nil {
+			log.Println("Mode photo : envoi de l'image téléversée")
+			serveRaw(w, raw)
+			return
+		} else {
+			log.Printf("Mode photo actif mais photo indisponible (%v) : repli sur le dashboard", err)
+		}
+	}
+
 	pngBytes, err := captureDashboard()
 	if err != nil {
 		http.Error(w, "Erreur de capture", http.StatusInternalServerError)
 		return
 	}
 
-	raw, err := toMonochrome1bpp(pngBytes, 800, 480)
+	raw, err := toMonochrome1bpp(pngBytes, ScreenWidth, ScreenHeight)
 	if err != nil {
 		http.Error(w, "Erreur de conversion", http.StatusInternalServerError)
 		return
 	}
 
+	serveRaw(w, raw)
+}
+
+func serveRaw(w http.ResponseWriter, raw []byte) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(raw)))
 	w.Write(raw)
@@ -226,6 +259,9 @@ func main() {
 
 	log.Println(getUnreadEmails())
 
+	// Mode d'affichage et photo éventuelle, restaurés depuis le disque
+	loadState()
+
 	// Lancement du serveur HTML interne dans une Goroutine
 	go startInternalHTMLServer()
 
@@ -236,6 +272,15 @@ func main() {
 	//mux.HandleFunc("/api/v1/dashboard.png", authenticateRequest(imageAPIHandler))
 	mux.HandleFunc("/api/v1/dashboard.png", imageAPIHandler)
 	mux.HandleFunc("/api/v1/dashboard.raw", imageRawAPIHandler)
+
+	// Interface de pilotage (téléphone / PC), protégée par ADMIN_PASSWORD
+	mux.HandleFunc("GET /admin", requireAdminAuth(adminPageHandler))
+	mux.HandleFunc("POST /admin/upload", requireAdminAuth(adminUploadHandler))
+	mux.HandleFunc("POST /admin/mode", requireAdminAuth(adminModeHandler))
+	mux.HandleFunc("GET /admin/preview.png", requireAdminAuth(adminPreviewHandler))
+	if os.Getenv("ADMIN_PASSWORD") == "" {
+		log.Println("ATTENTION : ADMIN_PASSWORD non défini, l'interface /admin est désactivée.")
+	}
 
 	log.Println("Serveur API public démarré sur 0.0.0.0:8081")
 	log.Println("En attente de requêtes cryptées de l'ESP32...")
