@@ -27,7 +27,9 @@ func getGoogleCalendarEvents() []EventInfo {
 	// 1. Authentification
 	calendarService, err := calendar.NewService(ctx, option.WithCredentialsFile("credentials.json"))
 	if err != nil {
-		log.Fatalf("Impossible de créer le client Google Calendar: %v", err)
+		// Pas de log.Fatalf ici : cela tuerait tout le serveur au milieu d'une requête.
+		log.Printf("Impossible de créer le client Google Calendar: %v", err)
+		return nil
 	}
 
 	// 2. Plage horaire (de minuit à 23h59 aujourd'hui)

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -42,6 +43,12 @@ type DashboardData struct {
 func startInternalHTMLServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Chromium demande aussi /favicon.ico : inutile de relancer météo, agenda et IMAP pour ça
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		tMatin, eMatin, tAprem, eAprem := getWeather()
 		agendaDuJour := getGoogleCalendarEvents()
 
@@ -82,8 +89,15 @@ func startInternalHTMLServer() {
 	}
 }
 
+// Un seul Chromium à la fois : l'aperçu /admin et l'ESP32 peuvent demander une capture
+// au même moment, et deux instances en parallèle saturent le conteneur (mémoire, /dev/shm).
+var captureMu sync.Mutex
+
 // 2. Fonction pour capturer la page HTML avec Chromium headless
 func captureDashboard() ([]byte, error) {
+	captureMu.Lock()
+	defer captureMu.Unlock()
+
 	// Création d'un contexte avec un timeout strict de 45 secondes
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
@@ -93,6 +107,8 @@ func captureDashboard() ([]byte, error) {
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true), // Souvent nécessaire dans les conteneurs/VM Linux
+		// /dev/shm ne fait que 64 Mo dans Docker : Chromium y plante sans ce flag
+		chromedp.Flag("disable-dev-shm-usage", true),
 	)...)
 	defer allocCancel()
 
@@ -231,12 +247,14 @@ func imageRawAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	pngBytes, err := captureDashboard()
 	if err != nil {
+		log.Printf("Erreur de capture : %v", err)
 		http.Error(w, "Erreur de capture", http.StatusInternalServerError)
 		return
 	}
 
 	raw, err := toMonochrome1bpp(pngBytes, ScreenWidth, ScreenHeight)
 	if err != nil {
+		log.Printf("Erreur de conversion : %v", err)
 		http.Error(w, "Erreur de conversion", http.StatusInternalServerError)
 		return
 	}

@@ -275,6 +275,7 @@ func adminPreviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
+		log.Printf("Aperçu indisponible : %v", err)
 		http.Error(w, "Aperçu indisponible", http.StatusNotFound)
 		return
 	}
