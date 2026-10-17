@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // Structure JSON d'Open-Meteo
@@ -45,15 +46,31 @@ func getWeather() (string, string, string, string) {
 	// API appelée avec temperature_2m ET weathercode
 	url := "https://api.open-meteo.com/v1/forecast?latitude=48.299999&longitude=4.083330&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=1"
 
-	resp, err := http.Get(url)
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		fmt.Println("Erreur requête météo :", err)
 		return "", "", "", ""
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Erreur requête météo : statut", resp.Status)
+		return "", "", "", ""
+	}
+
 	var weather WeatherResponse
-	json.NewDecoder(resp.Body).Decode(&weather)
+	if err := json.NewDecoder(resp.Body).Decode(&weather); err != nil {
+		fmt.Println("Erreur décodage météo :", err)
+		return "", "", "", ""
+	}
+
+	// Sans ce contrôle, une réponse incomplète fait paniquer le handler :
+	// la page renvoyée à Chromium est vide et la capture échoue.
+	if len(weather.Hourly.Temperature2m) <= 16 || len(weather.Hourly.Weathercode) <= 16 {
+		fmt.Println("Erreur météo : données horaires incomplètes")
+		return "", "", "", ""
+	}
 
 	// Index 10 = 10:00 (Matin), Index 16 = 16:00 (Après-midi)
 	tempMatin := weather.Hourly.Temperature2m[10]
